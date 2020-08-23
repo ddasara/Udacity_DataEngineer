@@ -5,17 +5,10 @@ import pandas as pd
 from sql_queries import *
 
 
-def get_files(filepath):
-    all_files = []
-    for root, dirs, files in os.walk(filepath):
-        files = glob.glob(os.path.join(root,'*.json'))
-        for f in files :
-            all_files.append(os.path.abspath(f))
-    
-    return all_files
-
 def process_song_file(cur, filepath):
-    
+###This function reads JSON files and read information of song and artist data and saves into song_data and artist_data
+
+#open song file
     df = pd.read_json(filepath, lines=True)
 
     # insert song record
@@ -33,11 +26,11 @@ def process_song_file(cur, filepath):
 
 
 def process_log_file(cur, filepath):
-    # open log file
-    
-    df = pd.read_json(filepath, lines= True)
-    #df = 
+  ### This function reads Log files and reads information of time, user and songplay data and saves into time, user, songplay
 
+# open log file
+    df = pd.read_json(filepath, lines= True)
+    
     # filter by NextSong action
     df = df[df['page'] == 'NextSong']
 
@@ -53,7 +46,6 @@ def process_log_file(cur, filepath):
     final_df=pd.DataFrame({'t':t,'Hour' : hour,'Day': day, 'Month' : month, 'Year': year,  'weekday': weekday, 'Week':week})
     time_data=final_df.values.tolist()
 
-    #time_data = 
     column_labels = ['Timestamp','hour', 'day','month','year','weekday','week']
     time_df = pd.DataFrame(time_data,columns= column_labels)
 
