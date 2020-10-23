@@ -56,44 +56,44 @@ staging_songs_table_create = (""" create table staging_songs(num_songs int,
 
 songplay_table_create = (""" create table dimsongplay(
                             songplay_id int identity(1,1) Primary Key sortkey distkey,
-                            start_time timestamp ,
-                            userId int,
+                            start_time timestamp NOT NULL ,
+                            userId int NOT NULL,
                             level varchar(100),
-                            song_id varchar(100),
-                            artist_id varchar(300),
+                            song_id varchar(100) NOT NULL,
+                            artist_id varchar(300) NOT NULL,
                             session_id int,
                             location varchar(300),
                             user_agent varchar(500));
 """)
 
-user_table_create = (""" create table dimuser(userId int sortkey ,
-                        first_name varchar(100), 
-                        last_name varchar(100), 
-                        gender varchar(10),
-                        level varchar(100));
+user_table_create = (""" create table dimuser(userId int Primary Key sortkey ,
+                        first_name varchar(100) NOT NULL, 
+                        last_name varchar(100) NOT NULL, 
+                        gender varchar(10) NOT NULL,
+                        level varchar(100) NOT NULL);
 """)
 
-song_table_create = (""" create table dimsong(song_id text sortkey,
-                        title varchar(300),
-                        artist_id varchar(300),
-                        year int,
+song_table_create = (""" create table dimsong(song_id text Primary Key sortkey,
+                        title varchar(300) NOT NULL,
+                        artist_id varchar(300) NOT NULL,
+                        year int NOT NULL,
                         duration float);
 """)
 
-artist_table_create = ("""create table dimartist(artist_id text sortkey,
-                        name varchar(100),
+artist_table_create = ("""create table dimartist(artist_id text Primary Key sortkey,
+                        name varchar(100) NOT NULL,
                         location varchar(300),
                         latitude float, 
                         longitude float);
 """)
 
-time_table_create = (""" create table dimtime(start_time timestamp sortkey distkey,
-                        hour int,
-                        day text,
-                        week int,
-                        month text, 
-                        year int, 
-                        weekday text);
+time_table_create = (""" create table dimtime(start_time timestamp Primary Key sortkey distkey,
+                        hour int NOT NULL,
+                        day text NOT NULL,
+                        week int NOT NULL,
+                        month text NOT NULL, 
+                        year int NOT NULL, 
+                        weekday text NOT NULL);
 """)
 
 # STAGING TABLES
@@ -111,7 +111,7 @@ staging_songs_copy = (""" COPY staging_songs FROM {}
 # FINAL TABLES
 
 songplay_table_insert = (""" insert into dimsongplay(start_time, userId, level,song_id,session_id,location,user_agent)
-                        select staging_events.ts as start_time,
+                        select DISTINCT staging_events.ts as start_time,
                         staging_events.userId as userId,
                         staging_events.level as level, 
                         staging_songs.song_id as song_id,
@@ -120,29 +120,30 @@ songplay_table_insert = (""" insert into dimsongplay(start_time, userId, level,s
                         staging_events.userAgent as user_agent
                         from staging_events 
                         join staging_songs on staging_songs.title = staging_events.title and 
-                        staging_events.artist = staging_songs.artist_name and songplay_id = 'Nextsong';
+                        staging_events.artist = staging_songs.artist_name and staging_events.page = 'Nextsong';
 """)
 
 user_table_insert = (""" insert into dimuser (userId, first_name, last_name, gender, level) 
-                        select staging_events.userId as userId ,
+                        select DISTINCT staging_events.userId as userId ,
                         staging_events.firstName as first_name,
                         staging_events.lastName as last_name, 
                         staging_events.gender as gender,
                         staging_events.level as level
-                        from staging_events where staging_events.userId is not null;
+                        from staging_events where staging_events.userId is not null and page = 'NextSong';
 """)
 
 song_table_insert = (""" insert into dimsong(song_id, title, artist_id, year, duration)
-                        select staging_songs.song_id as song_id, 
+                        select DISTINCT staging_songs.song_id as song_id, 
                         staging_songs.title as title, 
                         staging_songs.artist_id as artist_id,
                         staging_songs.year as year, 
                         staging_songs.duration as duration
-                        from staging_songs where staging_songs.song_id is not null; 
+                        from staging_songs 
+                        join staging_events on staging_events = staging_songswhere staging_songs.song_id is not null and ; 
 """)
 
 artist_table_insert = (""" insert into dimartist(artist_id,name, location,latitude,longitude)
-                            select staging_songs.artist_id as artist_id,
+                            select DISTINCT staging_songs.artist_id as artist_id,
                             staging_songs.artist_name as name,
                             staging_songs.artist_location as location,
                             staging_songs.artist_latitude as latitude,
@@ -151,7 +152,7 @@ artist_table_insert = (""" insert into dimartist(artist_id,name, location,latitu
 """)
 
 time_table_insert = (""" insert into dimtime(start_time, hour, day, week, month, year, weekday)
-                            select start_time, 
+                            select DISTINCT start_time, 
                             extract(hour from start_time),
                             extract(day from start_time),
                             extract(week from start_time),
